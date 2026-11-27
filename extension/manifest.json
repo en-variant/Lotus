@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Lotus",
+  "version": "0.1.0",
+  "description": "A simpler, accessible interface for websites.",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "background": {
+    "service_worker": "src/background/service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Turn on Lotus"
+  }
+}

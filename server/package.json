@@ -1,0 +1,11 @@
+{
+  "name": "lotus-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

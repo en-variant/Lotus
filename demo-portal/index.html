@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>City Electricity Services — Demo Portal</title>
+  <style>
+    body{margin:0;background:#e8e8e4;color:#222;font:16px Arial,sans-serif}header{background:#173d67;color:white;padding:18px 7%;font-size:14px}nav{background:#d6d8d4;padding:12px 7%;font-size:13px}main{max-width:960px;margin:28px auto;background:#fff;padding:28px;box-shadow:0 2px 12px #0002}h1{font-size:24px}h2{font-size:18px;border-bottom:1px solid #bbb;padding-bottom:8px}.notice{background:#fff4cc;border:1px solid #d8bc64;padding:12px;font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:flex;flex-direction:column;gap:6px;margin:14px 0}input{padding:10px;border:1px solid #999;font-size:16px}.small{font-size:13px;color:#555}table{border-collapse:collapse;width:100%;margin:12px 0}td,th{border:1px solid #bbb;text-align:left;padding:9px}button{padding:10px 18px;background:#1e4b78;color:white;border:0}
+  </style>
+</head>
+<body>
+  <header>STATE ELECTRICITY BOARD &nbsp; | &nbsp; ONLINE CONSUMER SERVICES</header>
+  <nav>Home &nbsp; / &nbsp; Consumer Corner &nbsp; / &nbsp; Bill Payment &nbsp; / &nbsp; Help</nav>
+  <main>
+    <p class="small">Consumer Services Portal &gt; Online Bill Enquiry and Payment</p>
+    <h1>Monthly Energy Consumption and Dues</h1>
+    <p class="notice">Please ensure that the consumer account particulars entered below correspond to the registered service connection. Payments are subject to applicable transaction levies.</p>
+    <h2>Enter Service Connection Particulars</h2>
+    <form id="bill-form">
+      <div class="grid">
+        <label class="field">Section / Subdivision Code<input name="section" placeholder="e.g. 204"></label>
+        <label class="field">Consumer Account Number<input name="consumer" placeholder="Enter account number"></label>
+      </div>
+      <label class="field">Registered Mobile Number<input name="mobile" inputmode="numeric" placeholder="Optional"></label>
+      <button type="submit">Fetch Bill Details</button>
+    </form>
+    <h2>Illustrative Current Charges</h2>
+    <table>
+      <thead><tr><th>Particulars</th><th>Amount</th></tr></thead>
+      <tbody>
+        <tr><td>Energy charges (consumption slab)</td><td>₹ 412.00</td></tr>
+        <tr><td>Fixed charges</td><td>₹ 65.00</td></tr>
+        <tr><td>Delayed payment surcharge</td><td>₹ 0.00</td></tr>
+        <tr><td>Digital service convenience fee</td><td>₹ 18.00</td></tr>
+      </tbody>
+    </table>
+    <p class="small">Demo portal only. The amounts and account fields are fictional. This page does not process payments.</p>
+    <div id="message" aria-live="polite"></div>
+  </main>
+  <script>
+    document.querySelector('#bill-form').addEventListener('submit', event => {
+      event.preventDefault();
+      document.querySelector('#message').textContent = 'Demo only: bill lookup is not connected yet.';
+    });
+  </script>
+</body>
+</html>
