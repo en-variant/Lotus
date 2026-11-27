@@ -4,7 +4,7 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      files: ["src/content/content-script.js"],
+      files: ["dist/content-script.js"]
     });
   } catch (error) {
     console.error("Lotus could not start on this tab", error);
