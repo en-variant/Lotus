@@ -1,4 +1,10 @@
 import { sanitizeSnapshot } from "../shared/sanitizer.ts";
+import { OVERLAY_STYLES, RESTORE_BUTTON_STYLES } from "./overlay-styles.js";
+import {
+  renderElectricityLookupScreen,
+  renderUnsupportedPageScreen,
+  createRestoreButton
+} from "./overlay-components.js";
 (() => {
   function isVisible(element) {
   if (!element || !element.isConnected) {
@@ -250,10 +256,17 @@ function collectSnapshot() {
  };
 }
   const hostId = "lotus-extension-host";
+  const restoreButtonId = "lotus-restore-button";
+  const restoreStyleId = "lotus-restore-style";
   const existing = document.getElementById(hostId);
   if (existing) {
-    existing.remove();
-    document.getElementById("lotus-restore-button")?.remove();
+    if (typeof existing._lotusCleanup === "function") {
+      existing._lotusCleanup();
+    } else {
+      existing.remove();
+      document.getElementById(restoreButtonId)?.remove();
+      document.getElementById(restoreStyleId)?.remove();
+    }
     return;
   }
   const approvedText = new Set([
@@ -279,51 +292,211 @@ function collectSnapshot() {
 const rawSnapshot = collectSnapshot();
 const snapshot = sanitizeSnapshot(rawSnapshot, approvedText);
 
+  function isTrustedDemoPortal(sanitizedSnapshot) {
+    const protocol = window.location.protocol;
+    let pathname = "";
+    try {
+      pathname = decodeURIComponent(window.location.pathname);
+    } catch {
+      return false;
+    }
 
+    const isLocalFileDemo =
+      protocol === "file:" && pathname.endsWith("/demo-portal/index.html");
 
+    const isLocalServerDemo =
+      (protocol === "http:" || protocol === "https:") &&
+      ["127.0.0.1", "localhost", "[::1]"].includes(window.location.hostname) &&
+      (pathname === "/" ||
+        pathname.endsWith("/index.html") ||
+        pathname.endsWith("/demo-portal/") ||
+        pathname.endsWith("/demo-portal/index.html"));
+
+    if (!isLocalFileDemo && !isLocalServerDemo) {
+      return false;
+    }
+
+    return (
+      sanitizedSnapshot.title === "City Electricity Services — Demo Portal" &&
+      sanitizedSnapshot.text_blocks.includes(
+        "Demo portal only. The amounts and account fields are fictional. This page does not process payments."
+      ) &&
+      sanitizedSnapshot.elements.some(
+        el => el.role === "text-input" && el.name === "Consumer Account Number"
+      )
+    );
+  }
+
+  function createPageInertManager(hostEl, excludedIds) {
+    const savedStates = [];
+
+    const apply = () => {
+      if (savedStates.length > 0) {
+        return;
+      }
+      for (const child of Array.from(document.documentElement.children)) {
+        if (
+          child === hostEl ||
+          child.tagName === "HEAD" ||
+          excludedIds.has(child.id)
+        ) {
+          continue;
+        }
+        savedStates.push({
+          el: child,
+          hadInert: Boolean(child.inert),
+          prevAriaHidden: child.getAttribute("aria-hidden")
+        });
+        child.inert = true;
+        child.setAttribute("aria-hidden", "true");
+      }
+    };
+
+    const restore = () => {
+      while (savedStates.length > 0) {
+        const { el, hadInert, prevAriaHidden } = savedStates.pop();
+        if (!el.isConnected) {
+          continue;
+        }
+        el.inert = hadInert;
+        if (!hadInert) {
+          el.removeAttribute("inert");
+        }
+        if (prevAriaHidden === null) {
+          el.removeAttribute("aria-hidden");
+        } else {
+          el.setAttribute("aria-hidden", prevAriaHidden);
+        }
+      }
+    };
+
+    return { apply, restore };
+  }
+
+  const previousActiveElement =
+    document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
   const host = document.createElement("div");
   host.id = hostId;
   host.style.cssText = "position:fixed;inset:0;z-index:2147483647";
   const shadow = host.attachShadow({ mode: "open" });
   const style = document.createElement("style");
-  style.textContent = `
-    :host { all: initial; }
-    .screen { box-sizing:border-box; min-height:100vh; padding:clamp(24px,6vw,72px); background:#f5f7fa; color:#17202a; font:20px/1.5 system-ui,sans-serif; }
-    .card { max-width:760px; margin:8vh auto; padding:32px; border-radius:20px; background:white; box-shadow:0 8px 40px #18212b20; }
-    h1 { font-size:2rem; margin-top:0; }
-    p { font-size:1.15rem; }
-    .actions { display:flex; gap:12px; flex-wrap:wrap; margin-top:28px; }
-    button { border:0; border-radius:10px; padding:14px 20px; font:inherit; font-weight:650; cursor:pointer; }
-    .primary { background:#155eef; color:white; } .secondary { background:#e9edf3; color:#17202a; }
-    button:focus-visible { outline:3px solid #f5a623; outline-offset:3px; }
-  `;
-  const screen = document.createElement("main");
-  screen.className = "screen";
-  screen.setAttribute("aria-label", "Lotus simplified page");
-  screen.innerHTML = `
-    <section class="card">
-      <h1>Lotus is ready</h1>
-      <p>This starter screen is the extension shell. The team will connect page understanding and the generated bill experience here.</p>
-      <div class="actions">
-        <button class="primary" id="original">Show original page</button>
-        <button class="secondary" id="stop">Stop Lotus</button>
-      </div>
-    </section>`;
-  shadow.append(style, screen);
-  document.documentElement.append(host);
+  style.textContent = OVERLAY_STYLES;
 
-  shadow.getElementById("original").addEventListener("click", () => {
+  const inertManager = createPageInertManager(
+    host,
+    new Set([restoreButtonId, restoreStyleId])
+  );
+
+  let focusTrapActive = true;
+
+  const getFocusableElements = () =>
+    Array.from(
+      shadow.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter(
+      el =>
+        !el.hidden &&
+        el.getClientRects().length > 0 &&
+        window.getComputedStyle(el).visibility !== "hidden"
+    );
+
+  const onShadowKeyDown = (event) => {
+    if (!focusTrapActive || event.key !== "Tab") {
+      return;
+    }
+
+    const focusables = getFocusableElements();
+    if (focusables.length === 0) {
+      event.preventDefault();
+      return;
+    }
+
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = shadow.activeElement;
+
+    if (event.shiftKey) {
+      if (!active || active === first || active === ui.card || !ui.card.contains(active)) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (!active || active === last || !ui.card.contains(active)) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  const onDocumentFocusIn = (event) => {
+    if (!focusTrapActive || !host.isConnected || host.style.display === "none") {
+      return;
+    }
+    if (event.target !== host) {
+      const focusables = getFocusableElements();
+      const fallback = focusables[0] || ui.card;
+      fallback?.focus({ preventScroll: true });
+    }
+  };
+
+  const removeRestoreUi = () => {
+    document.getElementById(restoreButtonId)?.remove();
+    document.getElementById(restoreStyleId)?.remove();
+  };
+
+  const cleanup = () => {
+    focusTrapActive = false;
+    shadow.removeEventListener("keydown", onShadowKeyDown);
+    document.removeEventListener("focusin", onDocumentFocusIn, true);
+    inertManager.restore();
+    removeRestoreUi();
+    host.remove();
+    if (
+      previousActiveElement &&
+      previousActiveElement.isConnected &&
+      typeof previousActiveElement.focus === "function"
+    ) {
+      previousActiveElement.focus({ preventScroll: true });
+    }
+  };
+
+  const showOriginalPage = () => {
+    focusTrapActive = false;
+    inertManager.restore();
     host.style.display = "none";
-    const restore = document.createElement("button");
-    restore.id = "lotus-restore-button";
-    restore.textContent = "Return to Lotus";
-    restore.style.cssText = "position:fixed;right:16px;top:16px;z-index:2147483647;padding:12px 16px;font:600 16px system-ui;border:0;border-radius:8px;background:#155eef;color:white";
-    restore.addEventListener("click", () => {
-      restore.remove();
+    removeRestoreUi();
+
+    const restoreStyle = document.createElement("style");
+    restoreStyle.id = restoreStyleId;
+    restoreStyle.textContent = RESTORE_BUTTON_STYLES;
+
+    const restore = createRestoreButton(() => {
+      removeRestoreUi();
       host.style.display = "block";
-    }, { once: true });
-    document.documentElement.append(restore);
-  });
-  shadow.getElementById("stop").addEventListener("click", () => host.remove());
+      inertManager.apply();
+      focusTrapActive = true;
+      ui.card.focus({ preventScroll: true });
+    });
+
+    document.documentElement.append(restoreStyle, restore);
+    restore.focus({ preventScroll: true });
+  };
+
+  const ui = isTrustedDemoPortal(snapshot)
+    ? renderElectricityLookupScreen({
+        onShowOriginal: showOriginalPage,
+        onStop: cleanup
+      })
+    : renderUnsupportedPageScreen({
+        onShowOriginal: showOriginalPage,
+        onStop: cleanup
+      });
+
+  host._lotusCleanup = cleanup;
+  shadow.append(style, ui.screen);
+  shadow.addEventListener("keydown", onShadowKeyDown);
+  document.addEventListener("focusin", onDocumentFocusIn, true);
+  document.documentElement.append(host);
+  inertManager.apply();
+  ui.card.focus({ preventScroll: true });
 })();
