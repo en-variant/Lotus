@@ -5,42 +5,105 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>City Electricity Services — Demo Portal</title>
   <style>
-    body{margin:0;background:#e8e8e4;color:#222;font:16px Arial,sans-serif}header{background:#173d67;color:white;padding:18px 7%;font-size:14px}nav{background:#d6d8d4;padding:12px 7%;font-size:13px}main{max-width:960px;margin:28px auto;background:#fff;padding:28px;box-shadow:0 2px 12px #0002}h1{font-size:24px}h2{font-size:18px;border-bottom:1px solid #bbb;padding-bottom:8px}.notice{background:#fff4cc;border:1px solid #d8bc64;padding:12px;font-size:14px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.field{display:flex;flex-direction:column;gap:6px;margin:14px 0}input{padding:10px;border:1px solid #999;font-size:16px}.small{font-size:13px;color:#555}table{border-collapse:collapse;width:100%;margin:12px 0}td,th{border:1px solid #bbb;text-align:left;padding:9px}button{padding:10px 18px;background:#1e4b78;color:white;border:0}
+    :root { color-scheme: light; font-family: Arial, sans-serif; color: #222; background: #e8e8e4; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-size: 16px; }
+    header { padding: 18px 7%; background: #173d67; color: #fff; font-size: 14px; }
+    nav { padding: 12px 7%; background: #d6d8d4; font-size: 13px; }
+    main { max-width: 960px; margin: 28px auto; padding: 28px; background: #fff; box-shadow: 0 2px 12px #0002; }
+    h1 { font-size: 24px; }
+    h2 { margin-top: 28px; padding-bottom: 8px; border-bottom: 1px solid #bbb; font-size: 18px; }
+    .notice { padding: 12px; border: 1px solid #d8bc64; background: #fff4cc; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .field { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; }
+    input { min-height: 42px; padding: 9px; border: 1px solid #777; border-radius: 3px; font: inherit; }
+    :focus-visible { outline: 3px solid #f0a000; outline-offset: 2px; }
+    .small { color: #555; font-size: 13px; }
+    table { width: 100%; margin: 12px 0; border-collapse: collapse; }
+    td, th { padding: 9px; border: 1px solid #bbb; text-align: left; }
+    button { min-height: 42px; padding: 10px 18px; border: 0; border-radius: 3px; background: #1e4b78; color: white; font: inherit; cursor: pointer; }
+    button.secondary { margin-left: 8px; background: #555; }
+    [hidden] { display: none !important; }
+    #lookup-message { margin-top: 14px; }
+    @media (max-width: 640px) { main { margin: 12px; padding: 18px; } .grid { grid-template-columns: 1fr; gap: 0; } }
   </style>
 </head>
 <body>
   <header>STATE ELECTRICITY BOARD &nbsp; | &nbsp; ONLINE CONSUMER SERVICES</header>
-  <nav>Home &nbsp; / &nbsp; Consumer Corner &nbsp; / &nbsp; Bill Payment &nbsp; / &nbsp; Help</nav>
+  <nav aria-label="Breadcrumb">Home &nbsp; / &nbsp; Consumer Corner &nbsp; / &nbsp; Bill Payment &nbsp; / &nbsp; Help</nav>
   <main>
     <p class="small">Consumer Services Portal &gt; Online Bill Enquiry and Payment</p>
     <h1>Monthly Energy Consumption and Dues</h1>
-    <p class="notice">Please ensure that the consumer account particulars entered below correspond to the registered service connection. Payments are subject to applicable transaction levies.</p>
-    <h2>Enter Service Connection Particulars</h2>
-    <form id="bill-form">
-      <div class="grid">
-        <label class="field">Section / Subdivision Code<input name="section" placeholder="e.g. 204"></label>
-        <label class="field">Consumer Account Number<input name="consumer" placeholder="Enter account number"></label>
-      </div>
-      <label class="field">Registered Mobile Number<input name="mobile" inputmode="numeric" placeholder="Optional"></label>
-      <button type="submit">Fetch Bill Details</button>
-    </form>
-    <h2>Illustrative Current Charges</h2>
-    <table>
-      <thead><tr><th>Particulars</th><th>Amount</th></tr></thead>
-      <tbody>
-        <tr><td>Energy charges (consumption slab)</td><td>₹ 412.00</td></tr>
-        <tr><td>Fixed charges</td><td>₹ 65.00</td></tr>
-        <tr><td>Delayed payment surcharge</td><td>₹ 0.00</td></tr>
-        <tr><td>Digital service convenience fee</td><td>₹ 18.00</td></tr>
-      </tbody>
-    </table>
-    <p class="small">Demo portal only. The amounts and account fields are fictional. This page does not process payments.</p>
-    <div id="message" aria-live="polite"></div>
+    <p class="notice">Please ensure the consumer account particulars match the registered service connection. This is a fictional demo portal. No payment is collected or submitted.</p>
+
+    <section aria-labelledby="lookup-heading">
+      <h2 id="lookup-heading">Enter Service Connection Particulars</h2>
+      <form id="bill-form" novalidate>
+        <div class="grid">
+          <label class="field" for="section-code">
+            Section / Subdivision Code
+            <input id="section-code" name="section" type="text" placeholder="e.g. 204" autocomplete="off">
+          </label>
+          <label class="field" for="consumer-number">
+            Consumer Account Number
+          <input id="consumer-number" name="consumer" type="text" placeholder="Enter account number" autocomplete="off" required data-lotus-demo-id="demo-consumer-number">
+          </label>
+        </div>
+        <label class="field" for="registered-mobile">
+          Registered Mobile Number (optional)
+          <input id="registered-mobile" name="mobile" type="text" inputmode="numeric" placeholder="Optional" autocomplete="off">
+        </label>
+        <button type="submit">Fetch Bill Details</button>
+        <p id="lookup-message" aria-live="polite" role="status"></p>
+      </form>
+    </section>
+
+    <section id="bill-summary" aria-labelledby="bill-heading" hidden>
+      <h2 id="bill-heading">Illustrative Current Charges</h2>
+      <p><strong>Demo account:</strong> Fictional consumer account</p>
+      <p><strong>Due date:</strong> 15 December 2026</p>
+      <table>
+        <caption class="small">Fictional bill amount and fee breakdown</caption>
+        <thead><tr><th scope="col">Particulars</th><th scope="col">Amount</th></tr></thead>
+        <tbody>
+          <tr><td>Energy charges (consumption slab)</td><td>₹ 412.00</td></tr>
+          <tr><td>Fixed charges</td><td>₹ 65.00</td></tr>
+          <tr><td>Delayed payment surcharge</td><td>₹ 0.00</td></tr>
+          <tr><td>Digital service convenience fee</td><td>₹ 18.00</td></tr>
+          <tr><th scope="row">Total due</th><th>₹ 495.00</th></tr>
+        </tbody>
+      </table>
+      <p class="notice">Demo only: these values are fictional. Lotus does not submit a payment.</p>
+      <button id="new-lookup" type="button" class="secondary">Start another lookup</button>
+    </section>
+
+    <p class="small">This portal is for the Lotus demo only. Do not enter real account or personal information. It does not connect to an electricity provider or process payments.</p>
   </main>
   <script>
-    document.querySelector('#bill-form').addEventListener('submit', event => {
+    const form = document.querySelector('#bill-form');
+    const accountInput = document.querySelector('#consumer-number');
+    const message = document.querySelector('#lookup-message');
+    const summary = document.querySelector('#bill-summary');
+
+    form.addEventListener('submit', event => {
       event.preventDefault();
-      document.querySelector('#message').textContent = 'Demo only: bill lookup is not connected yet.';
+      if (!accountInput.value.trim()) {
+        message.textContent = 'Enter a fictional consumer account number to view the demo bill.';
+        accountInput.focus();
+        return;
+      }
+
+      // The entered value is intentionally not displayed, transmitted, or logged.
+      message.textContent = 'Demo bill found. No provider was contacted.';
+      summary.hidden = false;
+      summary.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    document.querySelector('#new-lookup').addEventListener('click', () => {
+      form.reset();
+      summary.hidden = true;
+      message.textContent = '';
+      accountInput.focus();
     });
   </script>
 </body>

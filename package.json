@@ -1,0 +1,16 @@
+{
+  "name": "lotus",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "npm run test:safety && npm run test:server && npm run test:portal && npm run test:overlay",
+    "test:safety": "tsx extension/src/shared/safety.test.ts",
+    "test:server": "node --test server/index.test.mjs",
+    "test:portal": "node --test demo-portal/portal.test.mjs",
+    "test:overlay": "node --test extension/src/content/content-script.test.mjs"
+  },
+  "devDependencies": {
+    "happy-dom": "^21.0.4",
+    "tsx": "^4.20.0"
+  }
+}

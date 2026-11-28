@@ -24,13 +24,17 @@ docs/        Team plan and project decisions
 
 Start with [the Day 1 assignments and seven-day roadmap](docs/DAY1_PLAN.md). Agree on the contracts before parallel implementation. Keep the MVP narrow: first get snapshot → plan → render → fill one field working on the mock portal.
 
+The first screen is specified in [DAY1_OVERLAY_SPEC.md](docs/DAY1_OVERLAY_SPEC.md). The local `/plan` request and response, including the temporary `demo-consumer-number` target ID, are documented in [MEMBER4_INTEGRATION.md](docs/MEMBER4_INTEGRATION.md).
+
 ## Run the starter pieces
 
-- Start the fixed plan stub with `node server/index.mjs` (Node.js 20 or newer); it listens on `http://127.0.0.1:8787`.
+- Start the fixed plan stub with `node server/index.mjs` (Node.js 20 or newer); it listens on `http://127.0.0.1:8787` and expects a sanitized snapshot.
 - Open `demo-portal/index.html` in Chrome for the mock site.
-- In Chrome, open `chrome://extensions`, turn on Developer mode, choose **Load unpacked**, and select the `extension/` directory. Click the Lotus toolbar button on a normal page to show the starter overlay.
+- In Chrome, open `chrome://extensions`, turn on Developer mode, choose **Load unpacked**, and select the `extension/` directory. Click the Lotus toolbar button on the mock portal to show the bill-lookup overlay.
 
-The current extension is a loadable shell. The React renderer, snapshot pipeline, real plan connection, and action executor are implementation tasks for the team. The server response is hard-coded for the first vertical slice; it does not call an LLM yet.
+The overlay currently validates the account number and provides original-page/stop controls. Its page-action connection and snapshot pipeline still need Member 3 integration. The server response is fixed for the first vertical slice and does not call an LLM.
+
+Run the automated checks with `npm install` followed by `npm test`.
 
 ## Safety and demo rules
 
