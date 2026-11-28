@@ -1,12 +1,12 @@
 
 # Day 1 Safety and Contract Review
 
-**Project:** Lotus (Sugama)
+**Project:** Lotus
 **Responsibility:** Member 1
 **Related Issue:** #1
 **Pull Request:** #5
 
-**Status:** Draft — safety documentation, shared contract review, prototype safety modules and 16 local functional tests completed. Implementation guide review, team acknowledgement and integration pending.
+**Status:** Implementation-guide and shared-contract reviews completed. Standalone safety modules and all 33 repository checks are documented. Browser integration remains with the extension implementation.
 
 ## 1. Sensitive Field Values
 
@@ -68,7 +68,7 @@ The current Day 1 validator conservatively requires confirmation for every appro
 
 ## 4. Original Website Handoff
 
-Sugama must return control to the original website for:
+Lotus must return control to the original website for:
 
 - Login and authentication.
 - OTP verification.
@@ -78,7 +78,7 @@ Sugama must return control to the original website for:
 - Restricted or unsupported actions.
 - Actions whose targets cannot be safely verified.
 
-The user must always have access to the original website and the ability to stop Sugama.
+The user must always have access to the original website and the ability to stop Lotus.
 
 ## 5. Shared TypeScript Contract Review
 
@@ -107,7 +107,7 @@ The existing contracts provide a suitable preliminary baseline for the Day 1 pro
 
 Retain the existing TypeScript contract shapes for Day 1 and enforce additional safety rules through runtime validation.
 
-No immediate contract change requested, pending implementation guide review.
+No immediate contract shape change requested for Day 1. The optional `SnapshotElement.value` property means privacy must be enforced by the browser sanitizer before a request is sent; the type alone cannot guarantee redaction.
 
 Any future changes to shared contracts must be discussed and agreed upon by the team.
 
@@ -178,54 +178,35 @@ Responsibilities:
 
 ### TypeScript Compilation
 
-Status: Passed without reported compilation errors.
+The repository has no production extension bundle/type-check command yet. The safety utility tests are run through `tsx`; this verifies their exercised behavior but is not a full extension build.
 
 ### Functional Test Results
 
 | Metric | Result |
 |---|---|
-| Total tests | 16 |
-| Passed | 16 |
+| Total automated checks | 33 |
+| Passed | 33 |
 | Failed | 0 |
-| Local test success rate | 100% |
+| Test success rate | 100% |
 
 ### Individual Test Results
 
 | No. | Test | Result |
 |---|---|---|
-| 1 | Password value removed | PASS |
-| 2 | OTP value removed | PASS |
-| 3 | All input values omitted | PASS |
-| 4 | Hidden element removed | PASS |
-| 5 | Private URL removed | PASS |
-| 6 | Private text removed | PASS |
-| 7 | Approved text preserved | PASS |
-| 8 | Missing target blocked | PASS |
-| 9 | Password action blocked | PASS |
-| 10 | OTP action blocked | PASS |
-| 11 | Payment action blocked | PASS |
-| 12 | Hidden target blocked | PASS |
-| 13 | Unapproved action blocked | PASS |
-| 14 | Approved action allowed | PASS |
-| 15 | User confirmation required | PASS |
-| 16 | Duplicate target blocked | PASS |
+| Safety and privacy assertions | 16 | PASS |
+| Server request/response cases | 8 | PASS |
+| Portal lookup cases | 4 | PASS |
+| Overlay behavior cases | 5 | PASS |
 
 ### Test Execution Command
 
-Run from the repository root:
+Run all checks from the repository root:
 
-    npx --yes tsx extension/src/shared/safety.test.ts
+    npm test
 
-### Final Local Test Output
+Individual suites can be run with `npm run test:safety`, `npm run test:server`, `npm run test:portal`, or `npm run test:overlay`.
 
-    Passed: 16
-    Failed: 0
-    Total: 16
-    ALL SAFETY TESTS PASSED!
-
-These results were obtained through local testing in VS Code.
-
-GitHub Actions testing has not been configured or verified.
+The repository test command completed successfully: 33 automated checks passed and 0 failed. These checks cover the standalone safety utilities, the local server, the mock portal, and the overlay behavior. They do not replace manual Chrome testing or end-to-end extension/server integration. GitHub Actions testing has not been configured.
 
 ## 9. Integration Requirements
 
@@ -265,30 +246,50 @@ The current implementation is a Day 1 prototype.
 - The standalone functions have not yet been verified through complete browser-to-server integration.
 - The implementation is not approved for arbitrary real-world websites or real financial transactions.
 
-Passing all 16 local tests does not establish complete browser security.
+Passing the automated checks does not establish complete browser security.
 
 ## 11. Implementation Guide Review
 
-The following sections must be reviewed against the shared contracts and safety implementation:
+Reviewed the supplied `Sugama Implementation Guide.docx` sections against `extension/src/shared/types.ts`, `sanitizer.ts`, and `safety.ts`.
 
-- [ ] Section 4.2 - Page Understanding.
-- [ ] Section 4.3 - Planning.
-- [ ] Section 4.5 - Action Executor.
-- [ ] Section 4.7 - Safety and Trust.
+### Section 4.2 — Page understanding
 
-Status: Pending access to the implementation guide.
+- The `SnapshotElement` contract carries an ID, role, accessible name, field type, optional value/options, visibility and context. `Snapshot` carries URL, title, elements and text blocks. These cover the guide's core snapshot fields.
+- The sanitizer removes input values and raw URLs, drops hidden elements, and allowlists text. This is stricter than the guide's minimum privacy requirement and is appropriate for the fictional Day 1 flow.
+- The guide also calls for table-row text, compact snapshots, truncation, and stable IDs attached to DOM elements. Those are snapshot-collector responsibilities and are not implemented by the standalone sanitizer.
+- The guide names the DOM attribute `data-sugama-id`; this project uses the rebranded `data-lotus-id` convention. The extension implementation must use the same stable ID in the snapshot and live DOM.
 
-Any mismatches identified during the review must be documented before final approval.
+### Section 4.3 — Planning
 
-## 12. Team Acknowledgement
+- `ScreenPlan` represents the required screen ID, title, language and components. The server must validate that a field/button target refers to an ID in the submitted snapshot; the model or server must not invent selectors or URLs.
+- The guide also calls for schema validation, retry/fallback behavior, untrusted page text handling and risk labels derived by browser-side rules. The Day 1 endpoint is a fixed stub, so these LLM/schema/retry features are later work, not claims of the current implementation.
+- The guide's full request may include goal, profile and short history. The Day 1 stub only needs the snapshot to choose a demo plan and ignores those optional inputs.
+
+### Section 4.5 — Action executor
+
+- The shared `Action` type covers fill, click, select and check. `validateAction()` checks unique visible targets, approved operations, target roles/options and restricted actions, then requires confirmation.
+- The guide additionally requires native input setters/events, scrolling/highlighting, waiting for DOM changes, re-snapshotting and verifying each action. Those belong to the executor and are not implemented by these standalone safety modules; do not describe them as complete until Member 3 integrates them.
+
+### Section 4.7 — Safety and trust
+
+- The validator uses a trusted browser-side approval map and blocks irreversible and never-automate actions for Day 1. The sanitizer omits values and raw URLs. The notes correctly require human confirmation and handoff for authentication and payment steps.
+- The guide warns that page text is untrusted and prompt injection is reduced, not eliminated. There is no LLM in the Day 1 flow; if one is added later, schema checks, known-ID checks, browser-derived risk and human confirmation remain required.
+- The current keyword checks are defense in depth, not a complete classifier. Keep the prototype restricted to the fictional portal; never claim the rules make arbitrary websites safe.
+
+### Contract decision
+
+No immediate contract shape change requested for Day 1. Preserve the existing shared types and enforce privacy, target membership and risk rules at runtime. The main implementation gap is wiring the sanitizer and validator into the content-script request/action paths.
+
+## 12. Handoff Status (Coordination, Not a PR Gate)
 
 | Member | Responsibility | Status |
 |---|---|---|
-| Member 1 | Safety and contract review | Draft and prototype completed |
-| Member 3 | Chrome extension integration | Acknowledgement pending |
-| Member 4 | Mock portal and planning server | Acknowledgement pending |
+| Member 1 | Safety and contract review | Guide and contract review documented |
+| Member 2 | Overlay screen specification | Separate deliverable in `docs/DAY1_OVERLAY_SPEC.md` |
+| Member 3 | Chrome extension integration | Must wire these modules into the browser flow |
+| Member 4 | Mock portal and planning server | Use the agreed `POST /plan` request/response contract |
 
-Members 3 and 4 must review and acknowledge the safety requirements before Issue #1 is marked complete.
+Sharing the safety note with Members 3 and 4 is a useful handoff. Their acknowledgement is a coordination check, not a requirement for approving this documentation PR. Integration and end-to-end verification remain separate work.
 
 ## 13. Final Completion Checklist
 
@@ -302,13 +303,12 @@ Members 3 and 4 must review and acknowledge the safety requirements before Issue
 - [x] Implemented snapshot privacy sanitizer.
 - [x] Implemented action safety validator.
 - [x] Created automated safety tests.
-- [x] Completed TypeScript compilation.
-- [x] Passed all 16 local functional tests.
+- [x] Added a reproducible repository test command.
+- [x] Passed all 33 automated checks (16 safety, 8 server, 4 portal, 5 overlay).
 - [x] Uploaded code to GitHub.
 - [x] Created Pull Request #5.
-- [ ] Completed implementation guide review.
-- [ ] Received Member 3 acknowledgement.
-- [ ] Received Member 4 acknowledgement.
+- [x] Completed implementation guide review for sections 4.2, 4.3, 4.5 and 4.7.
+- [x] Documented handoff rules for Members 3 and 4 (acknowledgement is not a PR gate).
 - [ ] Verified live extension integration.
 - [ ] Completed final pull request review.
 
@@ -316,10 +316,10 @@ Members 3 and 4 must review and acknowledge the safety requirements before Issue
 
 The Day 1 safety documentation draft, shared contract review, standalone privacy sanitizer, action safety validator and automated functional tests have been completed.
 
-All 16 local functional tests passed successfully.
+All 33 automated checks currently pass. Live browser-to-server integration remains pending Member 3's snapshot and action-execution work.
 
 The existing shared TypeScript contracts remain unchanged.
 
-Final assignment completion is pending implementation guide review and acknowledgement from Members 3 and 4.
+The documentation and guide-review portion of Member 1's assignment is complete. Browser integration and the final group demo remain separate follow-up work.
 
 Full browser safety enforcement remains pending integration and end-to-end verification.
